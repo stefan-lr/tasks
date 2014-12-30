@@ -69,7 +69,7 @@
 
 	<script>
 		function Task(title) {
-			this.id = storage_nextTaskId();
+			this.id = storageLocal_nextTaskId();
 			this.title = title;
 			this.done = false;
 
@@ -89,65 +89,102 @@
 		var persistRef = null;
 		var persistQueue = [];
 
+		/**
+		 * Store public functions
+		 */
+		function storage_loadTask(taskId) {
+			var allTasks = storageLocal_allTasks();
+			return allTasks[taskId];
+		}
 		function storage_createTask(aTask) {
 			var aPersist = new PersistItem('C', aTask);
 			persistQueue.push(aPersist);
+
+			var allTasks = storageLocal_allTasks();
+			allTasks[aTask.id] = aTask;
+			storageLocal_saveAllTasks(allTasks);
+
+			storageRemote_attemptStore();
 		}
 		function storage_updateTask(aTask) {
 			var aPersist = new PersistItem('U', aTask);
 			persistQueue.push(aPersist);
+
+			var allTasks = storageLocal_allTasks();
+			allTasks[aTask.id] = aTask;
+			storageLocal_saveAllTasks(allTasks);
+
+			storageRemote_attemptStore();
 		}
 		function storage_deleteTask(aTask) {
 			var aPersist = new PersistItem('D', aTask);
-			persistQueue.push(aPersist);			
+			persistQueue.push(aPersist);
+
+			var allTasks = storageLocal_allTasks();
+			delete allTasks[aTask.id];
+			storageLocal_saveAllTasks(allTasks);
+
+			storageRemote_attemptStore();
 		}
 
-		function storage_nextTaskId() {
+		/**
+		 * Local storage
+		 */
+		function storageLocal_nextTaskId() {
 			var nextIdStr = window.localStorage.getItem('nextTaskId');
+			var salt = 's' + Math.floor(Math.random()*1000) + '-' + new Date().getTime();
 			if (nextIdStr) {
 				var nextId = parseInt(nextIdStr);
 				nextId++;
 				window.localStorage.setItem('nextTaskId', nextId);
 				persistRef.set('nextTaskId', nextId);
-				return nextId;
+				return salt + nextId;
 			} else {
 				var nextId = 1;
 				window.localStorage.setItem('nextTaskId', nextId);
 				persistRef.set('nextTaskId', nextId);
-				return nextId;
+				return salt + nextId;
 			}
 		}
-		function storageLocal_saveTasks(tasks) {
-			var tasksToSave = {};
-			for (i=0; i<tasks.length; i++) {
-				tasksToSave[tasks[i].data.id] = (tasks[i].data);
-			}
-			window.localStorage.setItem('tasks', JSON.stringify(tasksToSave));
+		function storageLocal_saveAllTasks(tasks) {
+			window.localStorage.setItem('tasks', JSON.stringify(tasks));
 		}
-		function storageLocal_loadTasks() {
+		function storageLocal_getAllTasks() {
 			var tasksStr = window.localStorage.getItem('tasks');
 			var tasks = {};
 			if (tasksStr) {
-				var savedTasks = JSON.parse(tasksStr);
-				for (key in savedTasks) {
-					var newTask = new Task('');
-					newTask.load(savedTasks[key]);
-					tasks[key] = { data: newTask };
-				}
+				var tasks = JSON.parse(tasksStr);
 			}
 			return tasks;
 		}
 
+		/**
+		 * Remote storage
+		 */
 		function storageRemote_attemptStore() {
 			storageRemote_attemptStoreQueue();
 			
 			// persist next id
 			var nextIdStr = window.localStorage.getItem('nextTaskId');
 			var nextId = parseInt(nextIdStr);
-			persistRef.set('nextTaskId', nextId);
-
+			persistRef.child('nextTaskId').set(nextId);
+			
 			// persist data
-			persistRef.set('data', storageLocal_loadTasks());
+			storageRemote_attemptStoreQueue();
+		}
+
+		function storageRemote_attemptStoreQueue() {
+			if (persistQueue.length > 0) {
+				var persistItem = persistQueue[0];
+
+				persistRef.child('data').child(persistItem.id).set(persistItem, function (error) {
+					if (error) {
+					} else {
+						persistQueue.splice(0, 1);
+						setTimeout(storageRemote_attemptStoreQueue, 1);
+					}
+				});
+			}
 		}
 		function storageRemote_attemptLoad() {
 			storageRemote_attemptStoreQueue();
@@ -162,10 +199,6 @@
 			persistRef.get('data', function (data) {
 				storageLocal_saveTasks(data);
 			});
-		}
-
-		function storageRemote_attemptStoreQueue() {
-			
 		}
 
 		function PersistItem(persistType, aTask) {
