@@ -5,9 +5,12 @@
 
 	<script src="angular.min.js"></script>
 	<script src="jquery.min.js"></script>
-	<script src="json.js"></script>
-
 	<script src='https://cdn.firebase.com/js/client/2.0.4/firebase.js'></script>
+	<!-- 
+	<script src="json.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.2/angular.min.js"></script>
+	<script src='https://cdn.firebase.com/js/client/2.0.4/firebase.js'></script>
+	 -->
 
 	<script>
 		function TasksCtrl($scope) {
@@ -65,51 +68,6 @@
 	</script>
 
 	<script>
-		var FB_URL = "https://atbtasks.firebaseio.com/";
-		var persistRef = null;
-
-		function storage_nextTaskId() {
-			var nextIdStr = window.localStorage.getItem('nextTaskId');
-			if (nextIdStr) {
-				var nextId = parseInt(nextIdStr);
-				nextId++;
-				window.localStorage.setItem('nextTaskId', nextId);
-				return nextId;
-			} else {
-				var nextId = 1;
-				window.localStorage.setItem('nextTaskId', nextId);
-				return nextId;
-			}
-		}
-		function storage_saveTasks(tasks) {
-			var tasksToSave = [];
-			for (i=0; i<tasks.length; i++) {
-				tasksToSave.push(tasks[i].data);
-			}
-			window.localStorage.setItem('tasks', JSON.stringify(tasksToSave));
-		}
-		function storage_loadTasks() {
-			var tasksStr = window.localStorage.getItem('tasks');
-			var tasks = [];
-			if (tasksStr) {
-				var savedTasks = JSON.parse(tasksStr);
-				for(i=0; i<savedTasks.length; i++) {
-					var newTask = new Task('');
-					newTask.load(savedTasks[i]);
-					tasks.push({ data: newTask });
-				}
-			}
-			return tasks;
-		}
-		function storage_enqueueChange(taskId, type, value) {
-			var changeQueue = window.localStorage.getItem('changeQueue');
-			if (changeQueue == null) {
-				changeQueue = [];
-			}
-
-			
-		}
-
 		function Task(title) {
 			this.id = storage_nextTaskId();
 			this.title = title;
@@ -123,6 +81,100 @@
 				this.title = jsonObj.title;
 				this.done = jsonObj.done;
 			}
+		}
+	</script>
+
+	<script>
+		var FB_URL = "https://atbtasks.firebaseio.com/";
+		var persistRef = null;
+		var persistQueue = [];
+
+		function storage_createTask(aTask) {
+			var aPersist = new PersistItem('C', aTask);
+			persistQueue.push(aPersist);
+		}
+		function storage_updateTask(aTask) {
+			var aPersist = new PersistItem('U', aTask);
+			persistQueue.push(aPersist);
+		}
+		function storage_deleteTask(aTask) {
+			var aPersist = new PersistItem('D', aTask);
+			persistQueue.push(aPersist);			
+		}
+
+		function storage_nextTaskId() {
+			var nextIdStr = window.localStorage.getItem('nextTaskId');
+			if (nextIdStr) {
+				var nextId = parseInt(nextIdStr);
+				nextId++;
+				window.localStorage.setItem('nextTaskId', nextId);
+				persistRef.set('nextTaskId', nextId);
+				return nextId;
+			} else {
+				var nextId = 1;
+				window.localStorage.setItem('nextTaskId', nextId);
+				persistRef.set('nextTaskId', nextId);
+				return nextId;
+			}
+		}
+		function storageLocal_saveTasks(tasks) {
+			var tasksToSave = {};
+			for (i=0; i<tasks.length; i++) {
+				tasksToSave[tasks[i].data.id] = (tasks[i].data);
+			}
+			window.localStorage.setItem('tasks', JSON.stringify(tasksToSave));
+		}
+		function storageLocal_loadTasks() {
+			var tasksStr = window.localStorage.getItem('tasks');
+			var tasks = {};
+			if (tasksStr) {
+				var savedTasks = JSON.parse(tasksStr);
+				for (key in savedTasks) {
+					var newTask = new Task('');
+					newTask.load(savedTasks[key]);
+					tasks[key] = { data: newTask };
+				}
+			}
+			return tasks;
+		}
+
+		function storageRemote_attemptStore() {
+			storageRemote_attemptStoreQueue();
+			
+			// persist next id
+			var nextIdStr = window.localStorage.getItem('nextTaskId');
+			var nextId = parseInt(nextIdStr);
+			persistRef.set('nextTaskId', nextId);
+
+			// persist data
+			persistRef.set('data', storageLocal_loadTasks());
+		}
+		function storageRemote_attemptLoad() {
+			storageRemote_attemptStoreQueue();
+
+			// load next id
+			var nextId = persistRef.get('nextTaskId');
+			if (nextId) {
+				window.localStorage.setItem('nextTaskId', nextId);
+			}
+
+			// load tasks
+			persistRef.get('data', function (data) {
+				storageLocal_saveTasks(data);
+			});
+		}
+
+		function storageRemote_attemptStoreQueue() {
+			
+		}
+
+		function PersistItem(persistType, aTask) {
+			/**
+			 * Types: C - create, U - update, D - delete.
+			 */
+			this.type = persistType;
+			this.task = aTask;
+			this.date = new Date().getTime();
 		}
 
 		function flushDB() {
