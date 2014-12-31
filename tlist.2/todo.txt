@@ -1,0 +1,8 @@
+
+
+- deleting items naturally
+- storing data into fb storage
+- handling offline updates
+- encapsulate into PhoneGap
+- publish on app market
+

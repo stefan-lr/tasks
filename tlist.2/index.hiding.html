@@ -1,0 +1,165 @@
+<html ng-app>
+	<head>
+		<title>List</title>
+	</head>
+
+	<script src="angular.js"></script>
+	<script src="jquery.min.js"></script>
+	<script src="json.js"></script>
+	<script>
+		function TasksCtrl($scope) {
+			$scope.tasks = storage_loadTasks();
+			$scope.isAdding = false;
+			$scope.itemTitle = "";
+			$scope.editingIndex = -1;
+
+			$scope.done = function (index) {
+				$scope.tasks[index].data.done = !$scope.tasks[index].data.done;
+				storage_saveTasks($scope.tasks);
+			}
+			$scope.remove = function (index) {
+				$scope.tasks[index].data.removed = true;
+				storage_saveTasks($scope.tasks);
+			}
+			$scope.edit = function (index) {
+				$scope.tasks[index].editingTitle = $scope.tasks[index].data.title;
+				$scope.editingIndex = index;
+				$scope.isAdding = false;
+			}
+			$scope.finishEditOK = function () {
+				var task = $scope.tasks[$scope.editingIndex];
+				task.data.title = task.editingTitle;
+				$scope.editingIndex = -1;
+			}
+			$scope.finishEditCancel = function () {
+				$scope.editingIndex = -1;
+			}
+
+			$scope.showAdd = function () {
+				$scope.editingIndex = -1;
+				$scope.isAdding = true;
+				$('#txtItemTitle').trigger('click');
+			}
+			$scope.addItem = function() {
+				$scope.tasks.push({ data: task_new($scope.itemTitle)});
+				$scope.itemTitle = '';
+				storage_saveTasks($scope.tasks);
+			}
+			$scope.addItemByKey = function(e) {
+				if (e.keyCode == 13) {
+					this.addItem();
+				} else if (e.keyCode == 27) {
+					$scope.isAdding = false;
+				}
+			}
+			$scope.cancelAdd = function () {
+				$scope.isAdding = false;
+			}
+
+		}
+
+		function storage_nextTaskId() {
+			var nextIdStr = window.localStorage.getItem('nextTaskId');
+			if (nextIdStr) {
+				var nextId = parseInt(nextIdStr);
+				nextId++;
+				window.localStorage.setItem('nextTaskId', nextId);
+				return nextId;
+			} else {
+				var nextId = 1;
+				window.localStorage.setItem('nextTaskId', nextId);
+				return nextId;
+			}
+		}
+		function storage_saveTasks(tasks) {
+			var tasksToSave = [];
+			for (i=0; i<tasks.length; i++) {
+				if (!tasks[i].data.removed) {
+					tasksToSave.push(tasks[i].data);
+				}
+			}
+			window.localStorage.setItem('tasks', JSON.stringify(tasksToSave));
+		}
+		function storage_loadTasks() {
+			var tasksStr = window.localStorage.getItem('tasks');
+			var tasks = [];
+			if (tasksStr) {
+				var savedTasks = JSON.parse(tasksStr);
+				for(i=0; i<savedTasks.length; i++) {
+					var newTask = task_new('');
+					task_load(newTask, savedTasks[i]);
+					tasks.push({ data: newTask });
+				}
+			}
+			return tasks;
+		}
+		function storage_enqueueChange(taskId, type, value) {
+			var changeQueue = window.localStorage.getItem('changeQueue');
+			if (changeQueue == null) {
+				changeQueue = [];
+			}
+
+			
+		}
+
+		function task_new(title) {
+			var aTask = {};
+			aTask.id = storage_nextTaskId();
+			aTask.title = title;
+			aTask.done = false;
+			aTask.removed = false;
+			return aTask;
+		}
+		function task_load (task, jsonObj) {
+			task.id = jsonObj.id;
+			task.title = jsonObj.title;
+			task.done = jsonObj.done;
+			task.removed = false;
+		}
+
+		function flushDB() {
+			$('#loggingWindow').html(
+					window.localStorage.getItem('tasks')
+					+ '<br/><br/>' + JSON.stringify(angular.element('html').scope().$$childHead.tasks));
+			setTimeout(flushDB, 2000);
+		}
+		$(function () {
+			flushDB();
+		});
+	</script>
+	<style>
+		.done {
+			text-decoration: line-through;
+		}
+		.hidden {
+			display: none;
+		}
+	</style>
+
+	<body ng-controller="TasksCtrl">
+		<div ng-repeat="task in tasks " ng-hide="task.data.removed">
+			<a ng-class="{done: task.data.done}">
+				<span ng-click="done($index)" ng-class="{hidden: editingIndex == $index}">{{task.data.title}}</span>
+				<span ng-class="{hidden: editingIndex != $index}">
+					<input ng-model="task.editingTitle" />
+					<button ng-click="finishEditOK()">OK</button>
+					<button ng-click="finishEditCancel()">Cancel</button>
+				</span>
+			</a>
+			<span ng-class="{hidden: editingIndex == $index}">
+				<button ng-click="edit($index)">e</button>
+				<button ng-click="remove($index)">x</button>
+			</span>
+		</div>
+		<div ng-hide="isAdding && editingIndex == -1" >
+			<button ng-click="showAdd()">+</button>
+		</div>
+		<div ng-hide="!isAdding || editingIndex != -1" >
+			<input ng-model="itemTitle" ng-keydown="addItemByKey($event)" id="txtItemTitle"/>
+			<button ng-click="addItem()">OK</button>
+			<button ng-click="cancelAdd()">Cancel</button>
+		</div>
+		<div id="loggingWindow">
+		</div>
+	</body>
+</html>
