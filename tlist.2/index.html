@@ -13,8 +13,195 @@
 	 -->
 
 	<script>
+		var FB_URL = "https://atbtasks.firebaseio.com/";
+		var persistRef = new Firebase(FB_URL);
+		var persistQueue = [];
+	</script>
+
+	<script>
+		function Task(title) {
+			this.id = storageLocal_nextTaskId();
+			this.title = title;
+			this.done = false;
+
+			this.flipDone = function () {
+				this.done = !this.done;
+			}
+			this.load = function (jsonObj) {
+				this.id = jsonObj.id;
+				this.title = jsonObj.title;
+				this.done = jsonObj.done;
+			}
+		}
+	</script>
+
+	<script>
+
+		/**
+		 * Store public functions
+		 */
+		function storage_loadTasks(callback) {
+			storageRemote_loadAll(function (tasks) {
+				if (tasks) {
+					callback(tasks);
+				} else {
+					var localTasks = storageLocal_getAllTasks();
+					callback(localTasks);
+				}
+			});
+			return [];
+		}
+		function storage_loadTask(taskId) {
+			var allTasks = storageLocal_getAllTasks();
+			return allTasks[taskId];
+		}
+		function storage_createTask(aTask) {
+			var aPersist = new PersistItem('C', aTask);
+			persistQueue.push(aPersist);
+
+			var allTasks = storageLocal_getAllTasks();
+			allTasks[aTask.id] = aTask;
+			storageLocal_saveAllTasks(allTasks);
+
+			storageRemote_attemptStore();
+		}
+		function storage_updateTask(aTask) {
+			var aPersist = new PersistItem('U', aTask);
+			persistQueue.push(aPersist);
+
+			var allTasks = storageLocal_getAllTasks();
+			allTasks[aTask.id] = aTask;
+			storageLocal_saveAllTasks(allTasks);
+
+			storageRemote_attemptStore();
+		}
+		function storage_deleteTask(aTask) {
+			var aPersist = new PersistItem('D', aTask);
+			persistQueue.push(aPersist);
+
+			var allTasks = storageLocal_getAllTasks();
+			delete allTasks[aTask.id];
+			storageLocal_saveAllTasks(allTasks);
+
+			storageRemote_attemptStore();
+		}
+
+		/**
+		 * Local storage
+		 */
+		function storageLocal_nextTaskId() {
+			var nextIdStr = window.localStorage.getItem('nextTaskId');
+			var salt = 's' + Math.floor(Math.random()*1000) + '-' + new Date().getTime();
+			if (nextIdStr) {
+				var nextId = parseInt(nextIdStr);
+				nextId++;
+				window.localStorage.setItem('nextTaskId', nextId);
+				persistRef.child('nextTaskId').set(nextId);
+				return salt + nextId;
+			} else {
+				var nextId = 1;
+				window.localStorage.setItem('nextTaskId', nextId);
+				persistRef.child('nextTaskId').set(nextId);
+				return salt + nextId;
+			}
+		}
+		function storageLocal_saveAllTasks(tasks) {
+			window.localStorage.setItem('tasks', JSON.stringify(tasks));
+		}
+		function storageLocal_getAllTasks() {
+			var tasksStr = window.localStorage.getItem('tasks');
+			var tasks = {};
+			if (tasksStr) {
+				var tasks = JSON.parse(tasksStr);
+			}
+			return tasks;
+		}
+
+		/**
+		 * Remote storage
+		 */
+		function storageRemote_attemptStore() {
+			// persist next id
+			var nextIdStr = window.localStorage.getItem('nextTaskId');
+			var nextId = parseInt(nextIdStr);
+			persistRef.child('nextTaskId').set(nextId);
+			
+			// persist data
+			storageRemote_attemptStoreQueue();
+		}
+
+		function storageRemote_attemptStoreQueue() {
+			if (persistQueue.length > 0) {
+				var persistItem = persistQueue[0];
+
+				persistRef.child('tasks').child(persistItem.task.id).set(persistItem.data(), function (error) {
+					if (error) {
+					} else {
+						persistQueue.splice(0, 1);
+						setTimeout(storageRemote_attemptStoreQueue, 1);
+					}
+				});
+			}
+		}
+		function storageRemote_loadAll(callback) {
+			// load next id
+			persistRef.child('nextTaskId').once("value", function (data) {
+				if (data.val()) {
+					window.localStorage.setItem('nextTaskId', data.val());
+				}
+			});
+
+			// load tasks
+			persistRef.child('tasks').once("value", function (data) {
+				if (data.val()) {
+					var tasksObj = data.val();
+					var tasks = [];
+					for (key in tasksObj) {
+						tasks.push(tasksObj[key]);
+					}
+					storageLocal_saveTasks(tasks);
+					callback(tasks);
+	
+					storageRemote_attemptStoreQueue();
+				}
+			});
+		}
+
+		function PersistItem(persistType, aTask) {
+			/**
+			 * Types: C - create, U - update, D - delete.
+			 */
+			this.type = persistType;
+			this.task = aTask;
+			this.date = new Date().getTime();
+
+			function data() {
+				return {
+					updated: this.date,
+					id: this.task.id;
+					title: this.task.title;
+					done: this.task.done;
+				}
+			}
+		}
+
+		function flushDB() {
+			jQuery('LoggingWindow').html(
+					window.localStorage.getItem('tasks'));
+					//+ '<br/><br/>' + JSON.stringify(angular.element('body').scope().$$childHead.tasks));
+			setTimeout(flushDB, 2000);
+		}
+		jQuery(function () {
+			flushDB();
+		});
+	</script>
+
+	<script>
 		function TasksCtrl($scope) {
-			$scope.tasks = storage_loadTasks();
+			$scope.tasks = [];
+			storage_loadTasks(function (tasksParam) {
+				$scope.tasks = tasksParam;
+			});
 			$scope.isAdding = false;
 			$scope.itemTitle = "";
 			$scope.editingIndex = -1;
@@ -72,175 +259,6 @@
 		}
 	</script>
 
-	<script>
-		function Task(title) {
-			this.id = storageLocal_nextTaskId();
-			this.title = title;
-			this.done = false;
-
-			this.flipDone = function () {
-				this.done = !this.done;
-			}
-			this.load = function (jsonObj) {
-				this.id = jsonObj.id;
-				this.title = jsonObj.title;
-				this.done = jsonObj.done;
-			}
-		}
-	</script>
-
-	<script>
-		var FB_URL = "https://atbtasks.firebaseio.com/";
-		var persistRef = null;
-		var persistQueue = [];
-
-		/**
-		 * Store public functions
-		 */
-		function storage_loadTasks(callback) {
-			storageRemote_loadAll(function (tasks) {
-				if (tasks) {
-					callback(tasks);
-				} else {
-					var localTasks = storageLocal_getAllTasks();
-					callback(localTasks);
-				}
-			});
-		}
-		function storage_loadTask(taskId) {
-			var allTasks = storageLocal_allTasks();
-			return allTasks[taskId];
-		}
-		function storage_createTask(aTask) {
-			var aPersist = new PersistItem('C', aTask);
-			persistQueue.push(aPersist);
-
-			var allTasks = storageLocal_allTasks();
-			allTasks[aTask.id] = aTask;
-			storageLocal_saveAllTasks(allTasks);
-
-			storageRemote_attemptStore();
-		}
-		function storage_updateTask(aTask) {
-			var aPersist = new PersistItem('U', aTask);
-			persistQueue.push(aPersist);
-
-			var allTasks = storageLocal_allTasks();
-			allTasks[aTask.id] = aTask;
-			storageLocal_saveAllTasks(allTasks);
-
-			storageRemote_attemptStore();
-		}
-		function storage_deleteTask(aTask) {
-			var aPersist = new PersistItem('D', aTask);
-			persistQueue.push(aPersist);
-
-			var allTasks = storageLocal_allTasks();
-			delete allTasks[aTask.id];
-			storageLocal_saveAllTasks(allTasks);
-
-			storageRemote_attemptStore();
-		}
-
-		/**
-		 * Local storage
-		 */
-		function storageLocal_nextTaskId() {
-			var nextIdStr = window.localStorage.getItem('nextTaskId');
-			var salt = 's' + Math.floor(Math.random()*1000) + '-' + new Date().getTime();
-			if (nextIdStr) {
-				var nextId = parseInt(nextIdStr);
-				nextId++;
-				window.localStorage.setItem('nextTaskId', nextId);
-				persistRef.set('nextTaskId', nextId);
-				return salt + nextId;
-			} else {
-				var nextId = 1;
-				window.localStorage.setItem('nextTaskId', nextId);
-				persistRef.set('nextTaskId', nextId);
-				return salt + nextId;
-			}
-		}
-		function storageLocal_saveAllTasks(tasks) {
-			window.localStorage.setItem('tasks', JSON.stringify(tasks));
-		}
-		function storageLocal_getAllTasks() {
-			var tasksStr = window.localStorage.getItem('tasks');
-			var tasks = {};
-			if (tasksStr) {
-				var tasks = JSON.parse(tasksStr);
-			}
-			return tasks;
-		}
-
-		/**
-		 * Remote storage
-		 */
-		function storageRemote_attemptStore() {
-			// persist next id
-			var nextIdStr = window.localStorage.getItem('nextTaskId');
-			var nextId = parseInt(nextIdStr);
-			persistRef.child('nextTaskId').set(nextId);
-			
-			// persist data
-			storageRemote_attemptStoreQueue();
-		}
-
-		function storageRemote_attemptStoreQueue() {
-			if (persistQueue.length > 0) {
-				var persistItem = persistQueue[0];
-
-				persistRef.child('tasks').child(persistItem.id).set(persistItem, function (error) {
-					if (error) {
-					} else {
-						persistQueue.splice(0, 1);
-						setTimeout(storageRemote_attemptStoreQueue, 1);
-					}
-				});
-			}
-		}
-		function storageRemote_loadAll(callback) {
-			// load next id
-			var nextId = persistRef.get('nextTaskId');
-			if (nextId) {
-				window.localStorage.setItem('nextTaskId', nextId);
-			}
-
-			// load tasks
-			persistRef.get('tasks', function (data) {
-				var tasksObj = data.val();
-				var tasks = [];
-				for (key in tasksObj) {
-					tasks.push(tasksObj[key]);
-				}
-				storageLocal_saveTasks(tasks);
-				callback(tasks);
-
-				storageRemote_attemptStoreQueue();
-			});
-		}
-
-		function PersistItem(persistType, aTask) {
-			/**
-			 * Types: C - create, U - update, D - delete.
-			 */
-			this.type = persistType;
-			this.task = aTask;
-			this.date = new Date().getTime();
-		}
-
-		function flushDB() {
-			jQuery('LoggingWindow').html(
-					window.localStorage.getItem('tasks'));
-					//+ '<br/><br/>' + JSON.stringify(angular.element('body').scope().$$childHead.tasks));
-			setTimeout(flushDB, 2000);
-		}
-		jQuery(function () {
-			flushDB();
-
-			persistRef = new Firebase(FB_URL);
-		});
-	</script>
 	<style>
 		.done {
 			text-decoration: line-through;
