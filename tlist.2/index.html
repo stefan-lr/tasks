@@ -13,9 +13,14 @@
 	 -->
 
 	<script>
-		var FB_URL = "https://atbtasks.firebaseio.com/";
+		var FB_URL = "https://atbtasksZZZZZ.firebaseio.com/";
+		//var FB_URL = "https://atbtasks.firebaseio.com/";
 		var persistRef = new Firebase(FB_URL);
 		var persistQueue = [];
+
+		if (window.localStorage.getItem('persistQueue')) {
+			persistQueue = JSON.parse(window.localStorage.getItem('persistQueue'));
+		}
 	</script>
 
 	<script>
@@ -41,12 +46,18 @@
 		 * Store public functions
 		 */
 		function storage_loadTasks(callback) {
+			var localTasks = storageLocal_getAllTasks();
+			var tasks = [];
+			for (key in localTasks) {
+				var aTask = new Task('');
+				aTask.load(localTasks[key]);
+				tasks.push(aTask);
+			}
+			callback(tasks);
+
 			storageRemote_loadAll(function (tasks) {
 				if (tasks) {
 					callback(tasks);
-				} else {
-					var localTasks = storageLocal_getAllTasks();
-					callback(localTasks);
 				}
 			});
 			return [];
@@ -58,9 +69,10 @@
 		function storage_createTask(aTask) {
 			var aPersist = new PersistItem('C', aTask);
 			persistQueue.push(aPersist);
+			window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
 
 			var allTasks = storageLocal_getAllTasks();
-			allTasks[aTask.id] = aTask;
+			allTasks.push(aTask);
 			storageLocal_saveAllTasks(allTasks);
 
 			storageRemote_attemptStore();
@@ -68,9 +80,14 @@
 		function storage_updateTask(aTask) {
 			var aPersist = new PersistItem('U', aTask);
 			persistQueue.push(aPersist);
+			window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
 
 			var allTasks = storageLocal_getAllTasks();
-			allTasks[aTask.id] = aTask;
+			for (pos = 0; pos < allTasks.length; pos++) {
+				if (allTasks[pos].id == aTask.id) {
+					allTasks[pos] = aTask;
+				}
+			}
 			storageLocal_saveAllTasks(allTasks);
 
 			storageRemote_attemptStore();
@@ -78,9 +95,14 @@
 		function storage_deleteTask(aTask) {
 			var aPersist = new PersistItem('D', aTask);
 			persistQueue.push(aPersist);
+			window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
 
 			var allTasks = storageLocal_getAllTasks();
-			delete allTasks[aTask.id];
+			for (pos = 0; pos < allTasks.length; pos++) {
+				if (allTasks[pos].id == aTask.id) {
+					allTasks.splice(pos, 1);
+				}
+			}
 			storageLocal_saveAllTasks(allTasks);
 
 			storageRemote_attemptStore();
@@ -134,13 +156,27 @@
 			if (persistQueue.length > 0) {
 				var persistItem = persistQueue[0];
 
-				persistRef.child('tasks').child(persistItem.task.id).set(persistItem.data(), function (error) {
-					if (error) {
-					} else {
-						persistQueue.splice(0, 1);
-						setTimeout(storageRemote_attemptStoreQueue, 1);
-					}
-				});
+				if (persistItem.type == 'D') {
+					persistRef.child('tasks/' + persistItem.task.id).set(null, function (error) {
+						if (error) {
+							setTimeout(storageRemote_attemptStoreQueue, 10*60*1000);
+						} else {
+							persistQueue.splice(0, 1);
+							window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+							setTimeout(storageRemote_attemptStoreQueue, 1);
+						}
+					});
+				} else {
+					persistRef.child('tasks/' + persistItem.task.id).set(persistItem.data(), function (error) {
+						if (error) {
+							setTimeout(storageRemote_attemptStoreQueue, 10*60*1000);
+						} else {
+							persistQueue.splice(0, 1);
+							window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+							setTimeout(storageRemote_attemptStoreQueue, 1);
+						}
+					});
+				}
 			}
 		}
 		function storageRemote_loadAll(callback) {
@@ -157,11 +193,13 @@
 					var tasksObj = data.val();
 					var tasks = [];
 					for (key in tasksObj) {
-						tasks.push(tasksObj[key]);
+						var aTask = new Task('');
+						aTask.load(tasksObj[key]);
+						tasks.push(aTask);
 					}
-					storageLocal_saveTasks(tasks);
+					storageLocal_saveAllTasks(tasks);
 					callback(tasks);
-	
+
 					storageRemote_attemptStoreQueue();
 				}
 			});
@@ -175,20 +213,28 @@
 			this.task = aTask;
 			this.date = new Date().getTime();
 
-			function data() {
+			this.data = function () {
 				return {
 					updated: this.date,
-					id: this.task.id;
-					title: this.task.title;
-					done: this.task.done;
+					id: this.task.id,
+					title: this.task.title,
+					done: this.task.done
 				}
 			}
 		}
 
+		var localStr = '';
+		var remoteStr = '';
 		function flushDB() {
-			jQuery('LoggingWindow').html(
-					window.localStorage.getItem('tasks'));
-					//+ '<br/><br/>' + JSON.stringify(angular.element('body').scope().$$childHead.tasks));
+			var localStr = window.localStorage.getItem('tasks');
+			//+ '<br/><br/>' + JSON.stringify(angular.element('body').scope().$$childHead.tasks));
+				jQuery('LoggingWindow').html(localStr + '<br/><br/>Remote:' + remoteStr);
+			persistRef.child('tasks').once("value", function (data) {
+				if (data.val()) {
+					remoteStr = JSON.stringify(data.val());
+				}
+				jQuery('LoggingWindow').html(localStr + '<br/><br/>Remote:' + remoteStr);
+			});
 			setTimeout(flushDB, 2000);
 		}
 		jQuery(function () {
@@ -270,8 +316,8 @@
 
 	<body ng-controller="TasksCtrl">
 		<div ng-repeat="task in tasks ">
-			<a ng-class="{done: task.data.done}">
-				<span ng-click="done($index)" ng-class="{hidden: editingIndex == $index}">{{task.data.title}}</span>
+			<a ng-class="{done: task.done}">
+				<span ng-click="done($index)" ng-class="{hidden: editingIndex == $index}">{{task.title}}</span>
 				<span ng-class="{hidden: editingIndex != $index}">
 					<input ng-model="task.editingTitle" />
 					<button ng-click="finishEditOK()">OK</button>
