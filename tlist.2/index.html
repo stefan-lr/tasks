@@ -226,7 +226,9 @@
 		var localStr = '';
 		var remoteStr = '';
 		function flushDB() {
-			var localStr = window.localStorage.getItem('tasks');
+			var localStr = 
+					window.localStorage.getItem('tasks') + '<br/><br/>'
+					+ window.localStorage.getItem('persistQueue');
 			//+ '<br/><br/>' + JSON.stringify(angular.element('body').scope().$$childHead.tasks));
 				jQuery('LoggingWindow').html(localStr + '<br/><br/>Remote:' + remoteStr);
 			persistRef.child('tasks').once("value", function (data) {
