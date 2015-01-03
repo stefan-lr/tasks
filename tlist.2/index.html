@@ -53,6 +53,7 @@
 			storageRemote_loadAll(function (tasks) {
 				if (tasks) {
 					callback(tasks);
+					angular.element($('body')).scope().$apply();
 				}
 			});
 			return [];
@@ -193,12 +194,22 @@
 						}
 					});
 				} else {
-					persistRef.child('tasks/' + persistItem.task.id).set(persistItem.data(), function (error) {
-						if (error) {
-							setTimeout(storageRemote_attemptStoreQueue, 10*60*1000);
+					persistRef.child('tasks/' + persistItem.task.id).once("value", function (data) {
+						var lastUpdateTime = 0;
+						if (data.val()) {
+							lastUpdateTime = parseInt(data.val().updated);
+						}
+						if (lastUpdateTime < persistItem.date) {
+							persistRef.child('tasks/' + persistItem.task.id).set(persistItem.data(), function (error) {
+								if (error) {
+									setTimeout(storageRemote_attemptStoreQueue, 10*60*1000);
+								} else {
+									remoteQueue_pop();
+									setTimeout(storageRemote_attemptStoreQueue, 1);
+								}
+							});
 						} else {
 							remoteQueue_pop();
-							setTimeout(storageRemote_attemptStoreQueue, 1);
 						}
 					});
 				}
@@ -317,6 +328,7 @@
 			$scope.showAdd = function () {
 				$scope.editingIndex = -1;
 				$scope.isAdding = true;
+				$scope.itemTitle = '';
 				$('#txtItemTitle').trigger('click');
 			}
 			$scope.addItem = function() {
