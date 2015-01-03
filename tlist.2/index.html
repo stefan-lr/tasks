@@ -13,14 +13,9 @@
 	 -->
 
 	<script>
-		var FB_URL = "https://atbtasksZZZZZ.firebaseio.com/";
+		var FB_URL = "https://atbtasks.firebaseio.com/";
 		//var FB_URL = "https://atbtasks.firebaseio.com/";
 		var persistRef = new Firebase(FB_URL);
-		var persistQueue = [];
-
-		if (window.localStorage.getItem('persistQueue')) {
-			persistQueue = JSON.parse(window.localStorage.getItem('persistQueue'));
-		}
 	</script>
 
 	<script>
@@ -68,8 +63,7 @@
 		}
 		function storage_createTask(aTask) {
 			var aPersist = new PersistItem('C', aTask);
-			persistQueue.push(aPersist);
-			window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+			remoteQueue_push(aPersist);
 
 			var allTasks = storageLocal_getAllTasks();
 			allTasks.push(aTask);
@@ -79,8 +73,7 @@
 		}
 		function storage_updateTask(aTask) {
 			var aPersist = new PersistItem('U', aTask);
-			persistQueue.push(aPersist);
-			window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+			remoteQueue_push(aPersist);
 
 			var allTasks = storageLocal_getAllTasks();
 			for (pos = 0; pos < allTasks.length; pos++) {
@@ -94,8 +87,7 @@
 		}
 		function storage_deleteTask(aTask) {
 			var aPersist = new PersistItem('D', aTask);
-			persistQueue.push(aPersist);
-			window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+			remoteQueue_push(aPersist);
 
 			var allTasks = storageLocal_getAllTasks();
 			for (pos = 0; pos < allTasks.length; pos++) {
@@ -106,6 +98,41 @@
 			storageLocal_saveAllTasks(allTasks);
 
 			storageRemote_attemptStore();
+		}
+
+		function remoteQueue_push(aPersistItem) {
+			var persistQueue = [];
+			if (window.localStorage.getItem('persistQueue')) {
+				persistQueue = JSON.parse(window.localStorage.getItem('persistQueue'));
+			}
+			persistQueue.push(aPersistItem);
+			window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+		}
+		function remoteQueue_top() {
+			if (window.localStorage.getItem('persistQueue')) {
+				persistQueue = JSON.parse(window.localStorage.getItem('persistQueue'));
+				if (persistQueue && persistQueue.length > 0) {
+					var out = new PersistItem('', {});
+					out.load(persistQueue[0]);
+					return out;
+				}
+			}
+			return null;
+		}
+		function remoteQueue_pop() {
+			if (window.localStorage.getItem('persistQueue')) {
+				persistQueue = JSON.parse(window.localStorage.getItem('persistQueue'));
+				if (persistQueue && persistQueue.length > 0) {
+					var firstItem = persistQueue[0];
+					persistQueue.splice(0, 1);
+					window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+
+					var out = new PersistItem('', {});
+					out.load(firstItem);
+					return out;
+				}
+			}
+			return null;
 		}
 
 		/**
@@ -153,16 +180,15 @@
 		}
 
 		function storageRemote_attemptStoreQueue() {
-			if (persistQueue.length > 0) {
-				var persistItem = persistQueue[0];
+			var persistItem = remoteQueue_top();
+			if (persistItem) {
 
 				if (persistItem.type == 'D') {
 					persistRef.child('tasks/' + persistItem.task.id).set(null, function (error) {
 						if (error) {
 							setTimeout(storageRemote_attemptStoreQueue, 10*60*1000);
 						} else {
-							persistQueue.splice(0, 1);
-							window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+							remoteQueue_pop();
 							setTimeout(storageRemote_attemptStoreQueue, 1);
 						}
 					});
@@ -171,8 +197,7 @@
 						if (error) {
 							setTimeout(storageRemote_attemptStoreQueue, 10*60*1000);
 						} else {
-							persistQueue.splice(0, 1);
-							window.localStorage.setItem('persistQueue', JSON.stringify(persistQueue));
+							remoteQueue_pop();
 							setTimeout(storageRemote_attemptStoreQueue, 1);
 						}
 					});
@@ -221,8 +246,17 @@
 					done: this.task.done
 				}
 			}
+			this.load = function (plainItem) {
+				this.type = plainItem.type;
+				this.task = new Task('');
+				this.task.load(plainItem.task);
+				this.date = plainItem.date;
+			}
 		}
 
+		/**
+		 *	Debug / logging
+		 */
 		var localStr = '';
 		var remoteStr = '';
 		function flushDB() {
