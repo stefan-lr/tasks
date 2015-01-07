@@ -1,0 +1,39 @@
+
+<script>
+	function timestampToReadable(timestamp) {
+		var date = new Date(timestamp);
+		var month = date.getMonth() + 1;
+		var out = '' + date.getDate() + '.' + month + '.' + date.getFullYear();
+		return out;
+	}
+</script>
+
+<div class="row">
+	<div>
+		Customer
+	</div>
+	<div>
+		URL
+	</div>
+	<div>
+		Click count
+	</div>
+	<div>
+		Last click date
+	</div>
+</div>
+
+<div class="row" ng-repeat="aClick in clicks">
+	<div>
+		{{aClick.customerName}}
+	</div>
+	<div>
+		{{aClick.URL}}
+	</div>
+	<div>
+		{{aClick.count}}
+	</div>
+	<div>
+		{{timestampToReadable(aClick.lastClickDate)}}
+	</div>
+</div>

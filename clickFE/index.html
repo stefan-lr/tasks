@@ -1,0 +1,37 @@
+<html ng-app>
+	<head>
+		<title>List</title>
+	</head>
+
+	<script src="angular.min.js"></script>
+	<script src="jquery.min.js"></script>
+	<script src="json.js"></script>
+
+
+	<body ng-controller="TasksCtrl">
+		<div ng-repeat="task in tasks ">
+			<a ng-class="{done: task.done}">
+				<span ng-click="done($index)" ng-class="{hidden: editingIndex == $index}">{{task.title}}</span>
+				<span ng-class="{hidden: editingIndex != $index}">
+					<input ng-model="task.editingTitle" />
+					<button ng-click="finishEditOK()">OK</button>
+					<button ng-click="finishEditCancel()">Cancel</button>
+				</span>
+			</a>
+			<span ng-class="{hidden: editingIndex == $index}">
+				<button ng-click="edit($index)">e</button>
+				<button ng-click="remove($index)">x</button>
+			</span>
+		</div>
+		<div ng-hide="isAdding && editingIndex == -1" >
+			<button ng-click="showAdd()">+</button>
+		</div>
+		<div ng-hide="!isAdding || editingIndex != -1" >
+			<input ng-model="itemTitle" ng-keydown="addItemByKey($event)" id="txtItemTitle"/>
+			<button ng-click="addItem()">OK</button>
+			<button ng-click="cancelAdd()">Cancel</button>
+		</div>
+		<LoggingWindow>
+		</LoggingWindow>
+	</body>
+</html>

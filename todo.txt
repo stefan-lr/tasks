@@ -1,8 +1,8 @@
 
 
-- deleting items naturally
-- storing data into fb storage
-- handling offline updates
+x- deleting items naturally
+x- storing data into fb storage
+x- handling offline updates
 - encapsulate into PhoneGap
 - publish on app market
-
+- preserve and change task order
