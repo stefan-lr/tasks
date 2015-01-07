@@ -7,3 +7,4 @@
 - publish on app market
 
 http://startbootstrap.com/template-overviews/sb-admin-2/
+http://components.onsen.io/patterns
