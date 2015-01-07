@@ -7,4 +7,6 @@ x- handling offline updates
 - publish on app market
 - preserve and change task order
 
+http://components.onsen.io/
 http://chocolatechip-ui.com/downloads
+https://github.com/curran/screencasts/tree/gh-pages/introToAngular
