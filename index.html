@@ -12,6 +12,8 @@
 	<script src='https://cdn.firebase.com/js/client/2.0.4/firebase.js'></script>
 	 -->
 
+    <link href="onsen-css-components.min.css" rel="stylesheet">
+
 	<script>
 		function TasksCtrl($scope) {
 			$scope.tasks = storage_loadTasks();
@@ -254,7 +256,7 @@
 			<button ng-click="addItem()">OK</button>
 			<button ng-click="cancelAdd()">Cancel</button>
 		</div>
-		<LoggingWindow>
+		<LoggingWindow style="display: none;">
 		</LoggingWindow>
 	</body>
 </html>
