@@ -6,3 +6,5 @@ x- handling offline updates
 - encapsulate into PhoneGap
 - publish on app market
 - preserve and change task order
+
+http://chocolatechip-ui.com/downloads
