@@ -6,3 +6,4 @@
 - encapsulate into PhoneGap
 - publish on app market
 
+http://startbootstrap.com/template-overviews/sb-admin-2/
