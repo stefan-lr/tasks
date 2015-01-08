@@ -362,10 +362,19 @@
 		.hidden {
 			display: none;
 		}
+		.list-item {
+			width: 100%;
+			height: 80px;
+			border-bottom: 1px solid #eee;
+			font-size: 24px;
+			line-height: 30px;
+			margin-top: 25px;
+			padding-left: 15%;
+		}
 	</style>
 
 	<body ng-controller="TasksCtrl">
-		<div ng-repeat="task in tasks ">
+		<div ng-repeat="task in tasks " class="list-item">
 			<a ng-class="{done: task.done}">
 				<span ng-click="done($index)" ng-class="{hidden: editingIndex == $index}">{{task.title}}</span>
 				<span ng-class="{hidden: editingIndex != $index}">
