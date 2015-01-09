@@ -364,12 +364,17 @@
 			/*font-family: 'Acme', sans-serif;*/
 			font-size: 26px;
 			line-height: 26px;
+			color: #292929;
 		}
 		input {
-			font-size: 26px;
+			font-size: 25px;
 			width: 100%;
-			border: 1px solid gray;
-			margin-top: -3px;
+			color: #242424;
+			border: 1px solid #ddd;
+			margin-top: -5px;
+			padding-left: 10px;
+			padding-rigth: 10px;
+			margin-left: -10px;
 		}
 
 		h1 {
@@ -407,7 +412,7 @@
 		.list-item-inner {
 			padding-top: 0.8em;
 			padding-left: 1.6em;
-			padding-right: 0px;
+			padding-right: 4.6em;
 			padding-bottom: 0px;
 			margin: 0;
 		}
@@ -431,12 +436,15 @@
 			text-align: center;
 			position: relative;
 		}
-		.bottom-item-inner {
+		.bottom-item-inner, .bottom-item-inner2 {
 			padding-top: 0.8em;
 			padding-bottom: 0px;
 			padding-left: 4.1em;
 			padding-right: 4.1em;
 			margin: 0;
+		}
+		.bottom-item-inner2 {
+			padding-left: 1.6em;
 		}
 		.bottom-actions-item {
 			width: 4em;
@@ -455,7 +463,7 @@
 		<header>
 			<h1>taskly</h1>
 		</header>
-		<div ng-repeat="task in tasks " class="list-item" ng-click="done($index)" >
+		<div ng-repeat="task in tasks" class="list-item" ng-click="done($index)" >
 			<div class="list-item-inner">
 				<span ng-class="{hidden: editingIndex == $index, done: task.done}">{{task.title}}</span>
 				<span ng-class="{hidden: editingIndex != $index}">
@@ -472,12 +480,12 @@
 			</div>
 		</div>
 		<div ng-hide="isAdding && editingIndex == -1" class="bottom-item" >
-			<div class="bottom-item-inner">
-				<i class="fa fa-plus-circle fa-lg" ng-click="showAdd()"></i>
+			<div class="bottom-item-inner" ng-click="showAdd()">
+				<i class="fa fa-plus-circle fa-lg" ></i>
 			</div>
 		</div>
 		<div ng-hide="!isAdding || editingIndex != -1" class="bottom-item" >
-			<div class="bottom-item-inner">
+			<div class="bottom-item-inner2">
 				<input ng-model="itemTitle" ng-keydown="addItemByKey($event)" id="txtItemTitle"/>
 				<div class="bottom-actions-item">
 					<i class="fa fa-sign-in fa-lg" ng-click="addItem()"></i>
