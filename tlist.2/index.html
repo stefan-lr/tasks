@@ -362,24 +362,28 @@
 	<style>
 		body {
 			/*font-family: 'Acme', sans-serif;*/
+			font-size: 26px;
+			line-height: 26px;
 		}
+		input {
+			font-size: 26px;
+			width: 100%;
+		}
+
 		h1 {
 			font-family: 'Niconne', cursive;
-			font-size: 36px;
-			line-height: 40px;
-			padding-top: 0px;
-			padding-bottom: 0px;
+			font-size: 2.1em;
+			line-height: 2.1em;
 			margin-top: 0px;
 			margin-bottom: 0px;
-			margin-left: 60px;
+			margin-left: 1em;
 		}
 		header {
 			width: 100%;
 			background: red;
 			color: white;
-			padding-top: 23px;
-			padding-bottom: 23px;
 		}
+
 		.done {
 			text-decoration: line-through;
 		}
@@ -389,25 +393,59 @@
 		i {
 			cursor: pointer;
 		}
+
 		.list-item {
 			width: 100%;
-			height: 80px;
+			height: 2.6em;
 			border-bottom: 1px solid #eee;
-			font-size: 24px;
-			line-height: 30px;
-			margin-top: 25px;
+			font-size: 1em;
+			line-height: 1em;
+			position: relative;
 		}
-		.list-item a {
-			margin-left: 60px;
+		.list-item-inner {
+			padding-top: 0.8em;
+			padding-left: 1.6em;
+			padding-right: 0px;
+			padding-bottom: 0px;
+			margin: 0;
+		}
+		.list-item-inner div {
+			padding-top: 0.8em;
+			padding-left: 0px;
+			padding-right: 0px;
+			padding-bottom: 0px;
+			margin: 0;
+		}
+		.list-actions-item {
+			width: 4em;
+			top: 0px;
+			right: 0px;
+			position: absolute;
 		}
 		.bottom-item {
 			width: 100%;
-			height: 80px;
+			height: 2.6em;
 			border-bottom: 1px solid #eee;
-			font-size: 24px;
-			line-height: 30px;
-			margin-top: 25px;
 			text-align: center;
+			position: relative;
+		}
+		.bottom-item-inner {
+			padding-top: 0.8em;
+			padding-bottom: 0px;
+			padding-left: 4.1em;
+			padding-right: 4.1em;
+			margin: 0;
+		}
+		.bottom-actions-item {
+			width: 4em;
+			top: 0px;
+			right: 0px;
+			padding-top: 0.8em;
+			padding-left: 0px;
+			padding-right: 0px;
+			padding-bottom: 0px;
+			margin: 0;
+			position: absolute;
 		}
 	</style>
 
@@ -416,26 +454,34 @@
 			<h1>taskly</h1>
 		</header>
 		<div ng-repeat="task in tasks " class="list-item" ng-click="done($index)" >
-			<a >
+			<div class="list-item-inner">
 				<span ng-class="{hidden: editingIndex == $index, done: task.done}">{{task.title}}</span>
 				<span ng-class="{hidden: editingIndex != $index}">
 					<input ng-model="task.editingTitle" ng-click="$event.stopPropagation();" />
+				</span>
+				<div ng-class="{hidden: editingIndex != $index, 'list-actions-item': true}">
 					<i class="fa fa-sign-in fa-lg" ng-click="finishEditOK(); $event.stopPropagation();"></i>
 					<i class="fa fa-times fa-lg" ng-click="finishEditCancel(); $event.stopPropagation();"></i>
-				</span>
-			</a>
-			<span ng-class="{hidden: editingIndex == $index}">
-				<i class="fa fa-pencil fa-fw" ng-click="edit($index); $event.stopPropagation();"></i>
-				<i class="fa fa-trash-o fa-lg" ng-click="remove($index)"></i>
-			</span>
+				</div>
+				<div ng-class="{hidden: editingIndex == $index, 'list-actions-item': true}">
+					<i class="fa fa-pencil fa-fw" ng-click="edit($index); $event.stopPropagation();"></i>
+					<i class="fa fa-trash-o fa-lg" ng-click="remove($index)"></i>
+				</div>
+			</div>
 		</div>
 		<div ng-hide="isAdding && editingIndex == -1" class="bottom-item" >
-			<i class="fa fa-plus-circle fa-lg" ng-click="showAdd()"></i>
+			<div class="bottom-item-inner">
+				<i class="fa fa-plus-circle fa-lg" ng-click="showAdd()"></i>
+			</div>
 		</div>
 		<div ng-hide="!isAdding || editingIndex != -1" class="bottom-item" >
-			<input ng-model="itemTitle" ng-keydown="addItemByKey($event)" id="txtItemTitle"/>
-			<i class="fa fa-sign-in fa-lg" ng-click="addItem()"></i>
-			<i class="fa fa-times fa-lg" ng-click="cancelAdd()"></i>
+			<div class="bottom-item-inner">
+				<input ng-model="itemTitle" ng-keydown="addItemByKey($event)" id="txtItemTitle"/>
+				<div class="bottom-actions-item">
+					<i class="fa fa-sign-in fa-lg" ng-click="addItem()"></i>
+					<i class="fa fa-times fa-lg" ng-click="cancelAdd()"></i>
+				</div>
+			</div>
 		</div>
 
 		<LoggingWindow style="display: none;">
