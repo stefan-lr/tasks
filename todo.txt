@@ -10,3 +10,12 @@ x- handling offline updates
 http://components.onsen.io/
 http://chocolatechip-ui.com/downloads
 https://github.com/curran/screencasts/tree/gh-pages/introToAngular
+
+http://www.wix.com/website/templates
+http://themeforest.net/
+http://themefiend.com/
+http://templated.co/
+http://bigtheme.net/
+
+(consider licences)
+
