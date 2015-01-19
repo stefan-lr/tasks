@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Insert title here</title>
+		<script src="../jquery.min.js"></script>
+		<script>
+			jQuery(function () {
+				var emailsTxt = $('#txtEmails').val();
+				var lines = emailsTxt.split('\n');
+				$('#out').html(lines.length);
+				for(i=0; i<lines.length; i++) {
+					var email = lines[i].trim();
+					$.ajax({
+						type: "POST",
+						url: "/s/userManagement/generate",
+						data: { email: email }
+					})
+					.done(function(res) {
+						if (res.ok) {
+							$('#out').append('<div>' + i + ":" + email + '</div>');
+						} else {
+							$('#failedEmails').append('<div>' + i + ":" + email + '</div>');
+						}
+					}).fail(function () {
+						$('#failedEmails').append('<div>' + i + ":" + email + '</div>');
+					});
+				}
+			});
+		</script>
+	</head>
+	<body>
+		<textarea id="txtEmails" cols="80" rows="6">
+			abbc
+			dslafj
+		</textarea>
+		<div id="out"></div>
+		Failed emails: <br/>
+		<div id="failedEmails"></div>
+	</body>
+</html>
