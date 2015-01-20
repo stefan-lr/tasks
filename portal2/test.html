@@ -1,0 +1,58 @@
+<html>
+
+	<head>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+		<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery.form/3.51/jquery.form.min.js"></script>
+		<script>
+			var uploadingFileId = null;
+
+			$(document).ready(function() {
+				$('#uploadForm').submit(function() {
+						$('#vUploadStatus').val('Upload started.');
+						updateUploadStatus();
+						$(this).ajaxSubmit({
+							error: function(xhr) {
+								status('Error: ' + xhr.status);
+							},
+							success: function(response) {
+								//console.log(response);
+								if (response.fileIdent) {
+									$('body').append('<div><a href="/api/get/' + response.fileIdent + '">file</a></div>');
+									uploadingFileId = response.fileIdent;
+								}
+							}
+						});
+						//Very important line, it disable the page refresh.
+						return false;
+				});
+				$('#btnSubmit').click(function () {
+					//$('#uploadForm').submit();
+				});
+			});
+			
+			function updateUploadStatus() {
+				$.ajax({
+					url: "",
+				})
+				.done(function( data ) {
+					if ( console && console.log ) {
+						console.log( "Sample of data:", data.slice( 0, 100 ) );
+					}
+				});
+				setTimeout(3000, updateUploadStatus);
+			}
+		</script>
+	</head>
+
+	<body>
+		Hello world!
+	
+		<form id="uploadForm" enctype="multipart/form-data" action="/api/photo" method="post">
+	
+			<input type="file" name="uploaded_file"/>
+			<div id="vUploadStatus"></div>
+
+			<button id="btnSubmit">Upload file</button>
+		</form>
+	</body>
+</html>
