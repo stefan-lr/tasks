@@ -31,15 +31,15 @@
 			});
 			
 			function updateUploadStatus() {
-				$.ajax({
-					url: "",
-				})
-				.done(function( data ) {
-					if ( console && console.log ) {
-						console.log( "Sample of data:", data.slice( 0, 100 ) );
-					}
-				});
-				setTimeout(3000, updateUploadStatus);
+				if (uploadingFileId) {
+					$.ajax({
+						url: "/api/meta/" + uploadingFileId,
+					})
+					.done(function(data) {
+						$('#vUploadStatus').val('Uploaded ' + data.doneSize + ' / ' + data.size + '.');
+					});
+					setTimeout(3000, updateUploadStatus);
+				}
 			}
 		</script>
 	</head>
